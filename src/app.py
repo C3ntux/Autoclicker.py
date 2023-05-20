@@ -2,7 +2,6 @@ import tkinter
 import customtkinter
 from PIL import Image
 
-
 import os
 import pyautogui
 from pynput import mouse, keyboard
@@ -16,10 +15,10 @@ class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
 
-        self.key = None
-        self.mode = 0  # 0 hold, 1 switch
-        self.cps = 50  # start value
-        self.button = 'left'  # 0 left, 1 right
+        self.left_mouse_button = ["left", 50, None, 0] # [button (0 left, 1 right), cps (50 start value), key (start None), mode (0 hold, 1 switch)]
+        self.right_mouse_button =  ["right", 50, None, 0]
+
+        self.selected_button = 0  # 0 left, 1 right
 
         self.start_clicker()
 
@@ -51,7 +50,12 @@ class App(customtkinter.CTk):
 
         self.submit_button = customtkinter.CTkButton(
             self, text="Submit", width=100, height=30, fg_color="#0094FF", command=self.start_clicker)
+        self.submit_button.grid(column=1, row=3, padx=(0, 120), pady=(0, 0), sticky="se")
+
+        self.submit_button = customtkinter.CTkButton(
+            self, text="Exit", width=100, height=30, fg_color="#0094FF", command=self.on_closing)
         self.submit_button.grid(column=1, row=3, padx=(0, 10), pady=(0, 0), sticky="se")
+
 
         # mouse frame -------------------------------------------
         self.mouse_frame = customtkinter.CTkFrame(self)
@@ -134,7 +138,6 @@ class App(customtkinter.CTk):
         self.radio_button_switch.grid(column=1, row=1, padx=(0, 45), pady=(10, 20), sticky="ne")
         self.radio_button_switch.configure(width=0, height=0)
 
-
 #FUNCTIONS----------------------------------------------------------------------#
 
     def start_clicker(self):
@@ -145,12 +148,13 @@ class App(customtkinter.CTk):
             pass
 
         self.clicker = Clicker()
-        self.clicker.key = self.key
-        self.clicker.mode = self.mode
-        self.clicker.cps = self.cps
-        self.clicker.button = self.button
+
+        self.clicker.clmb = self.left_mouse_button
+        self.clicker.crmb = self.right_mouse_button
 
         self.clicker.start()
+
+        
 
     def on_closing(self):
         try:
@@ -165,14 +169,61 @@ class App(customtkinter.CTk):
     def mouse_select(self):
         button = self.mouse_radio_var.get()
 
-        self.mouse.destroy()
-
         if button == 0:
             img = self.l_mouse
-            self.button = "left"
+            self.selected_button = 0  # 0 left, 1 right
+
+            self.cps_value_label.configure(text=str(self.left_mouse_button[1]))
+            self.cps_slider.set(self.left_mouse_button[1])
+
+            if not self.left_mouse_button[2] == None:
+                key = self.left_mouse_button[2].split('.')
+                if key[0] == "keyboard":
+                    key = key
+                elif key[0] == "Button":
+                    if key[1] == "x1":
+                        key = "Mouse button 4"
+                    elif key[1] == "x2":
+                        key = "Mouse button 5"
+            else:
+                key = "None"
+
+            self.key_label.configure(text=str(key))
+
+            if self.left_mouse_button[3] == 0:
+                self.radio_button_hold.select()
+
+            elif self.left_mouse_button[3] == 1:
+                self.radio_button_switch.select()
+
         else:
             img = self.r_mouse
-            self.button = "right"
+            self.selected_button = 1  # 0 left, 1 right
+
+            self.cps_value_label.configure(text=str(self.right_mouse_button[1]))
+            self.cps_slider.set(self.right_mouse_button[1])
+
+            if not self.right_mouse_button[2] == None:
+                key = self.right_mouse_button[2].split('.')
+                if key[0] == "keyboard":
+                    key = key
+                elif key[0] == "Button":
+                    if key[1] == "x1":
+                        key = "Mouse button 4"
+                    elif key[1] == "x2":
+                        key = "Mouse button 5"
+            else:
+                key = "None"
+
+            self.key_label.configure(text=str(key))
+
+            if self.right_mouse_button[3] == 0:
+                self.radio_button_hold.select()
+
+            elif self.right_mouse_button[3] == 1:
+                self.radio_button_switch.select()
+
+        self.mouse.destroy()    
 
         self.mouse = customtkinter.CTkLabel(master=self.mouse_frame, image=img, text='')
         self.mouse.grid(column=1, row=0, padx=(0, 0), pady=(20, 20), sticky="nsew")
@@ -182,7 +233,12 @@ class App(customtkinter.CTk):
 
     def cps_value_slider(self, value):
         self.cps_value_label.configure(text=str(round(value)))
-        self.cps = round(value)
+
+        if self.selected_button == 0:  # 0 left, 1 right
+            self.left_mouse_button[1] = round(value)
+
+        elif self.selected_button == 1:  # 0 left, 1 right 
+            self.right_mouse_button[1] = round(value)
 
     #---------------------------#
 
@@ -193,30 +249,48 @@ class App(customtkinter.CTk):
 
     def on_key_press(self, event):
         key = event.keysym
-        self.key_label.configure(text=key)
+
         self.unbind("<KeyPress>")
         self.unbind("<Button>")
+        self.key_label.configure(text=key)
 
-        self.key = 'keyboard.Key.' + key
+        if self.selected_button == 0:  # 0 left, 1 right
+            self.left_mouse_button[2] =  key
+
+        elif self.selected_button == 1:  # 0 left, 1 right 
+            self.right_mouse_button[2] = key
         
     def on_mouse_click(self, event):
         button = event.num
         if button == 2 or button == 4 or button == 5:
-            self.key_label.configure(text=f"Mouse button {button}")
+
             self.unbind("<KeyPress>")
             self.unbind("<Button>")
+            self.key_label.configure(text=f"Mouse button {button}")
 
             if button == 2:
-                self.key = 'Button.middle'
+                key = 'Button.middle'
             elif button == 4:
-                self.key = 'Button.x1'
+                key = 'Button.x1'
             elif button == 5:
-                self.key = 'Button.x2'
+                key = 'Button.x2'
+
+            if self.selected_button == 0: # 0 left, 1 right
+                self.left_mouse_button[2] = key
+
+            elif self.selected_button == 1: # 0 left, 1 right
+                self.right_mouse_button[2] = key
 
     #---------------------------#
 
     def change_mode(self):
-        self.mode = self.activ_radio_var.get()
+        mode = self.activ_radio_var.get()
+
+        if self.selected_button == 0: # 0 left, 1 right
+            self.left_mouse_button[3] = mode
+
+        elif self.selected_button == 1: # 0 left, 1 right
+            self.right_mouse_button[3] = mode
 
 #Clicker----------------------------------------------------------------------#
 
@@ -227,51 +301,115 @@ class Clicker(threading.Thread):
         self.is_running = False
         self.click_loop_thread = None
 
-    def click_loop(self):
+    def click_loop(self, button, cps):
         # accuracy calculation
-        actual_cps = -0.0007301777170198202*self.cps**2 + 0.9913716678058782*self.cps + 0.1362499999999756
-        proc_diff = round(((actual_cps-self.cps)/self.cps), 3)*(-1)
-        corr_cps = self.cps+(self.cps*proc_diff) 
+        actual_cps = -0.0007301777170198202*cps**2 + 0.9913716678058782*cps + 0.1362499999999756
+        proc_diff = round(((actual_cps-cps)/cps), 3)*(-1)
+        corr_cps = cps+(cps*proc_diff) 
         pause = 1 / corr_cps
 
-
         while self.is_running:
-            pyautogui.click(button=self.button)
+            pyautogui.click(button=button)
             pyautogui.PAUSE = pause
             
     def on_press(self, key):
-        if self.mode == 0:
-            if not self.is_running and str(key) == self.key:
-                self.is_running = True
-                self.click_loop_thread = threading.Thread(target=self.click_loop)
-                self.click_loop_thread.start()
-        else:
-            if self.is_running and str(key) == self.key:
-                self.is_running = False
-            elif not self.is_running and str(key) == self.key:
-                self.is_running = True
-                self.click_loop_thread = threading.Thread(target=self.click_loop)
-                self.click_loop_thread.start()
+        key = str(key).replace("'", "")
+
+        if self.clmb[3] == 0:
+            if not self.is_running:
+                if key == self.clmb[2]:
+                    self.is_running = True
+                    self.click_loop_thread = threading.Thread(target=self.click_loop, args=("left", self.clmb[1]))
+                    self.click_loop_thread.start()
+
+        elif self.clmb[3] == 1:
+            if self.is_running:
+                if key == self.clmb[2]:
+                    self.is_running = False
+            
+            elif not self.is_running:
+                if key == self.clmb[2]:
+                    self.is_running = True
+                    self.click_loop_thread = threading.Thread(target=self.click_loop, args=("left", self.clmb[1]))
+                    self.click_loop_thread.start()
+
+        #---------------------------#
+
+        if self.crmb[3] == 0:
+            if not self.is_running:
+                if key == self.crmb[2]:
+                    self.is_running = True
+                    self.click_loop_thread = threading.Thread(target=self.click_loop, args=("right", self.crmb[1]))
+                    self.click_loop_thread.start()
+
+        elif self.crmb[3] == 1:
+            if self.is_running:
+                if key == self.crmb[2]:
+                    self.is_running = False
+
+            elif not self.is_running:     
+                if key == self.crmb[2]:
+                    self.is_running = True
+                    self.click_loop_thread = threading.Thread(target=self.click_loop, args=("right", self.crmb[1]))
+                    self.click_loop_thread.start()  
 
     def on_release(self, key):
-        if self.mode == 0 and str(key) == self.key:
-            self.is_running = False
+        key = str(key).replace("'", "")
+
+        if self.clmb[3] == 0:
+            if key == self.clmb[2]:
+                self.is_running = False
+
+        elif self.crmb[3] == 0:
+            if key == self.crmb[2]:
+                self.is_running = False
 
     def on_click(self, x, y, button, pressed):
-        if self.mode == 0:
-            if not self.is_running and str(button) == self.key:
-                self.is_running = True
-                self.click_loop_thread = threading.Thread(target=self.click_loop)
-                self.click_loop_thread.start()
-            elif not pressed and str(button) == self.key:
-                self.is_running = False
-        else:
-            if self.is_running and pressed and str(button) == self.key:
-                self.is_running = False
-            elif not self.is_running and pressed and str(button) == self.key:
-                self.is_running = True
-                self.click_loop_thread = threading.Thread(target=self.click_loop)
-                self.click_loop_thread.start()
+        if self.clmb[3] == 0:
+            if not self.is_running and pressed:
+                if str(button) == self.clmb[2]:
+                    self.is_running = True
+                    self.click_loop_thread = threading.Thread(target=self.click_loop, args=("left", self.clmb[1]))
+                    self.click_loop_thread.start()
+
+            elif self.is_running and not pressed:
+                if str(button) == self.clmb[2]:
+                    self.is_running = False
+
+        elif self.clmb[3] == 1:
+            if self.is_running and pressed:
+                if str(button) == self.clmb[2]:
+                    self.is_running = False
+
+            elif not self.is_running and pressed:
+                if str(button) == self.clmb[2]:
+                    self.is_running = True
+                    self.click_loop_thread = threading.Thread(target=self.click_loop, args=("left", self.clmb[1]))
+                    self.click_loop_thread.start()
+        
+        #---------------------------#
+
+        if self.crmb[3] == 0:
+            if not self.is_running and pressed:
+                if str(button) == self.crmb[2]:
+                        self.is_running = True
+                        self.click_loop_thread = threading.Thread(target=self.click_loop, args=("right", self.crmb[1]))
+                        self.click_loop_thread.start()
+
+            elif self.is_running and not pressed:
+                if str(button) == self.crmb[2]:
+                    self.is_running = False
+
+        elif self.crmb[3] == 1:
+            if self.is_running and pressed:
+                if str(button) == self.crmb[2]:
+                    self.is_running = False
+
+            elif not self.is_running and pressed:
+                if str(button) == self.crmb[2]:
+                    self.is_running = True
+                    self.click_loop_thread = threading.Thread(target=self.click_loop, args=("right", self.crmb[1]))
+                    self.click_loop_thread.start()
 
     def stop(self):
         if self.keyboard_listener:
